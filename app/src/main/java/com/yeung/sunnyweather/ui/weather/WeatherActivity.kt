@@ -1,13 +1,18 @@
 package com.yeung.sunnyweather.ui.weather
 
+import android.content.Context
 import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
 import android.view.View
 import android.view.ViewGroup
+import android.view.inputmethod.InputMethodManager
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.GravityCompat
+import androidx.drawerlayout.widget.DrawerLayout
 import androidx.lifecycle.ViewModelProvider
+import com.yeung.sunnyweather.R
 import com.yeung.sunnyweather.databinding.ActivityWeatherBinding
 import com.yeung.sunnyweather.databinding.ForecastBinding
 import com.yeung.sunnyweather.databinding.ForecastItemBinding
@@ -19,9 +24,9 @@ import java.text.SimpleDateFormat
 import java.util.Locale
 
 
-class WeatherActivity : AppCompatActivity() {
+class WeatherActivity : AppCompatActivity(), View.OnClickListener {
 
-    private lateinit var weatherBinding: ActivityWeatherBinding
+    lateinit var weatherBinding: ActivityWeatherBinding
 
     private lateinit var forecastBinding: ForecastBinding
 
@@ -60,12 +65,41 @@ class WeatherActivity : AppCompatActivity() {
             val weather = result.getOrNull()
             if (weather != null) {
                 showWeatherInfo(weather)
-            } else {
+            }
+            else {
                 Toast.makeText(this, "无法成功获取天气信息", Toast.LENGTH_SHORT).show()
                 result.exceptionOrNull()?.printStackTrace()
             }
+            weatherBinding.swipeRefresh.isRefreshing = false
         }
+        weatherBinding.swipeRefresh.setColorSchemeResources(R.color.colorPrimary)
+        refreshWeather()
+        weatherBinding.swipeRefresh.setOnRefreshListener {
+            refreshWeather()
+        }
+
+        nowBinding.navBtn.setOnClickListener(this)
+        weatherBinding.drawerLayout.addDrawerListener(object : DrawerLayout.DrawerListener {
+            override fun onDrawerSlide(drawerView: View, slideOffset: Float) {}
+
+            override fun onDrawerOpened(drawerView: View) {}
+
+            override fun onDrawerClosed(drawerView: View) {
+                val manager = getSystemService(Context.INPUT_METHOD_SERVICE)
+                        as InputMethodManager
+                manager.hideSoftInputFromWindow(
+                    drawerView.windowToken,
+                    InputMethodManager.HIDE_NOT_ALWAYS
+                )
+            }
+
+            override fun onDrawerStateChanged(newState: Int) {}
+        })
+    }
+
+    fun refreshWeather() {
         viewModel.refreshWeather(viewModel.locationLng, viewModel.locationLat)
+        weatherBinding.swipeRefresh.isRefreshing = true
     }
 
     private fun showWeatherInfo(weather: Weather) {
@@ -101,9 +135,9 @@ class WeatherActivity : AppCompatActivity() {
             temperatureInfo.text = tempText
             forecastBinding.forecastLayout.addView(forecastItemBinding.root)
             val layoutParams =
-                forecastItemBinding.root.layoutParams  as ViewGroup.MarginLayoutParams
+                forecastItemBinding.root.layoutParams as ViewGroup.MarginLayoutParams
             val marginInPx = (16 * resources.displayMetrics.density).toInt()
-            layoutParams.setMargins(0,  marginInPx, 0, marginInPx)
+            layoutParams.setMargins(0, marginInPx, 0, marginInPx)
             forecastItemBinding.root.layoutParams = layoutParams
         }
 
@@ -114,5 +148,13 @@ class WeatherActivity : AppCompatActivity() {
         lifeIndexBinding.ultravioletText.text = lifeIndex.ultraviolet[0].desc
         lifeIndexBinding.carWashingText.text = lifeIndex.carWashing[0].desc
         weatherBinding.weatherLayout.visibility = View.VISIBLE
+    }
+
+    override fun onClick(v: View?) {
+        when (v?.id) {
+            R.id.navBtn -> {
+                weatherBinding.drawerLayout.openDrawer(GravityCompat.START)
+            }
+        }
     }
 }
